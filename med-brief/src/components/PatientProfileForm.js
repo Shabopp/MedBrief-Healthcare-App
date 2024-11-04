@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { firestore, storage } from '../firebase/firebase'; // Firebase storage added
+import { firestore, storage } from '../firebase/firebase';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage'; // For image upload
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { useAuth } from '../context/AuthContext';
 
 function PatientProfileForm() {
@@ -22,7 +22,6 @@ function PatientProfileForm() {
   const [age, setAge] = useState('');
   const [photoFile, setPhotoFile] = useState(null);
 
-  // Fetch existing data from Firestore on component mount
   useEffect(() => {
     const fetchData = async () => {
       const docRef = doc(firestore, 'users', currentUser.uid);
@@ -46,43 +45,31 @@ function PatientProfileForm() {
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData({ ...formData, [name]: value });
-
-    if (name === 'dob') {
-      calculateAge(value); // Update age when DOB changes
-    }
+    if (name === 'dob') calculateAge(value);
   };
 
   const handlePhotoChange = (e) => {
     if (e.target.files[0]) {
       setPhotoFile(e.target.files[0]);
+      setFormData({ ...formData, profilePhotoUrl: URL.createObjectURL(e.target.files[0]) });
     }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
     let photoUrl = formData.profilePhotoUrl;
-
-    // Upload profile photo to Firebase Storage if a new photo is selected
     if (photoFile) {
       const photoRef = ref(storage, `profilePhotos/${currentUser.uid}`);
       await uploadBytes(photoRef, photoFile);
       photoUrl = await getDownloadURL(photoRef);
     }
-
     try {
-      // Save form data to Firestore, including the photo URL
-      await setDoc(
-        doc(firestore, 'users', currentUser.uid),
-        {
-          ...formData,
-          profilePhotoUrl: photoUrl,
-          role: 'patient',
-          profileCompleted: true,
-        },
-        { merge: true }
-      );
-
+      await setDoc(doc(firestore, 'users', currentUser.uid), {
+        ...formData,
+        profilePhotoUrl: photoUrl,
+        role: 'patient',
+        profileCompleted: true,
+      }, { merge: true });
       alert('Profile saved successfully!');
     } catch (error) {
       console.error('Error saving profile:', error);
@@ -90,130 +77,169 @@ function PatientProfileForm() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 p-6">
-      <form
-        onSubmit={handleSubmit}
-        className="bg-white p-8 rounded-lg shadow-lg w-full max-w-2xl space-y-6"
-      >
-        <h2 className="text-2xl font-semibold text-gray-800 mb-4 text-center">
-          Complete Your Profile
-        </h2>
-
-        <input
-          type="text"
-          name="fullName"
-          value={formData.fullName}
-          onChange={handleChange}
-          placeholder="Full Name"
-          className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400"
-          required
-        />
-
-        <input
-          type="date"
-          name="dob"
-          value={formData.dob}
-          onChange={handleChange}
-          placeholder="Date of Birth"
-          className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400"
-          required
-        />
-
-        <div className="w-full p-3 border border-gray-300 rounded-md focus:outline-none">
-          <label className="block text-gray-700">Age: {age || 'N/A'}</label>
-        </div>
-
-        <input
-          type="text"
-          name="gender"
-          value={formData.gender}
-          onChange={handleChange}
-          placeholder="Gender"
-          className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400"
-          required
-        />
-
-        <input
-          type="text"
-          name="bloodGroup"
-          value={formData.bloodGroup}
-          onChange={handleChange}
-          placeholder="Blood Group"
-          className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400"
-          required
-        />
-
-        <input
-          type="text"
-          name="phone"
-          value={formData.phone}
-          onChange={handleChange}
-          placeholder="Phone Number"
-          className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400"
-          required
-        />
-
-        {/* Profile Photo Upload */}
-        <div className="w-full p-3 border border-gray-300 rounded-md focus:outline-none">
-          <label className="block text-gray-700">Profile Photo:</label>
-          <input type="file" onChange={handlePhotoChange} accept="image/*" />
-          {formData.profilePhotoUrl && (
-            <img
-              src={formData.profilePhotoUrl}
-              alt="Profile"
-              className="mt-4 h-20 w-20 object-cover rounded-full"
-            />
-          )}
-        </div>
-
-        <textarea
-          name="allergies"
-          value={formData.allergies}
-          onChange={handleChange}
-          placeholder="Known Allergies"
-          className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400"
-        />
-
-        <textarea
-          name="chronicConditions"
-          value={formData.chronicConditions}
-          onChange={handleChange}
-          placeholder="Chronic Conditions"
-          className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400"
-        />
-
-        <textarea
-          name="pastSurgeries"
-          value={formData.pastSurgeries}
-          onChange={handleChange}
-          placeholder="Past Surgeries"
-          className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400"
-        />
-
-        <textarea
-          name="currentMedications"
-          value={formData.currentMedications}
-          onChange={handleChange}
-          placeholder="Current Medications"
-          className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400"
-        />
-
-        <textarea
-          name="familyHistory"
-          value={formData.familyHistory}
-          onChange={handleChange}
-          placeholder="Family Medical History"
-          className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400"
-        />
-
-        <button
-          type="submit"
-          className="w-full bg-blue-500 hover:bg-blue-600 text-white py-3 rounded-full transition duration-300"
+   
+    <div className="min-h-screen flex items-center justify-center  ... py-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-2xl w-full space-y-8 p-10 ">
+        <h1
+          className="text-left mb-4"
+          style={{
+            color: '#333333',
+            backgroundColor: 'rgba(0, 0, 0, 0)',
+            fontFamily: '"sharp-sans-semibold", Arial, sans-serif',
+            fontSize: '38px',
+            lineHeight: '44px',
+            fontWeight: '400',
+            textAlign: 'center',
+          }}
         >
-          Save Profile
-        </button>
-      </form>
+          Complete Your Profile
+        </h1>
+
+        <div className="flex flex-col items-center space-y-4 mb-6">
+          <div className="flex flex-col items-center space-y-2">
+            <label className="text-custom-gray font-sharp-sans-semibold text-custom-base leading-custom font-normal">
+              Profile Picture
+            </label>
+            <div className="relative">
+              {formData.profilePhotoUrl ? (
+                <img
+                  src={formData.profilePhotoUrl}
+                  alt="Profile"
+                  className="h-24 w-24 rounded-full border border-gray-300 object-cover shadow-md"
+                />
+              ) : (
+                <div className="h-24 w-24 rounded-full border border-gray-300 flex items-center justify-center text-custom-gray font-sharp-sans-semibold text-custom-base leading-custom font-normal">
+                  No Image
+                </div>
+              )}
+              <label
+                htmlFor="profilePhoto"
+                className="absolute bottom-0 right-0 p-2 bg-cyan-500 rounded-full cursor-pointer shadow-md text-white hover:bg-cyan-700 transition duration-200"
+                title="Upload New Photo"
+              >
+                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+                </svg>
+              </label>
+            </div>
+          </div>
+          <input
+            id="profilePhoto"
+            name="profilePhoto"
+            type="file"
+            onChange={handlePhotoChange}
+            accept="image/*"
+            className="hidden"
+          />
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div className="grid grid-cols-1 gap-y-6 gap-x-4 sm:grid-cols-2">
+            <div className="col-span-full">
+              <label htmlFor="fullName" className="text-custom-gray font-sharp-sans-semibold text-custom-base leading-custom font-normal">
+                Full Name
+              </label>
+              <input
+                id="fullName"
+                name="fullName"
+                type="text"
+                value={formData.fullName}
+                onChange={handleChange}
+                required
+                className="w-full mt-1 p-3 rounded-md border border-gray-300 shadow-sm focus:border-cyan-500 focus:ring-2 focus:ring-cyan-700 transition duration-200"
+              />
+            </div>
+
+            <div>
+              <label htmlFor="dob" className="text-custom-gray font-sharp-sans-semibold text-custom-base leading-custom font-normal">
+                Date of Birth
+              </label>
+              <input
+                id="dob"
+                name="dob"
+                type="date"
+                value={formData.dob}
+                onChange={handleChange}
+                required
+                className="w-full mt-1 p-3 rounded-md border border-gray-300 shadow-sm focus:border-cyan-500 focus:ring-2 focus:ring-cyan-700 transition duration-200"
+              />
+            </div>
+
+            <div>
+              <label htmlFor="age" className="text-custom-gray font-sharp-sans-semibold text-custom-base leading-custom font-normal">
+                Age
+              </label>
+              <input
+                id="age"
+                name="age"
+                type="text"
+                value={age}
+                readOnly
+                className="w-full mt-1 p-3 rounded-md border border-gray-300 shadow-sm bg-gray-100"
+              />
+            </div>
+
+            {[ 
+              { id: 'gender', label: 'Gender', type: 'text' },
+              { id: 'bloodGroup', label: 'Blood Group', type: 'text' },
+            ].map(({ id, label, type }) => (
+              <div key={id} className="mb-4">
+                <label htmlFor={id} className="text-custom-gray font-sharp-sans-semibold text-custom-base leading-custom font-normal">{label}</label>
+                <input
+                  id={id}
+                  name={id}
+                  type={type}
+                  value={formData[id]}
+                  onChange={handleChange}
+                  required
+                  className="w-full mt-1 p-3 rounded-md border border-gray-300 shadow-sm focus:border-cyan-500 focus:ring-2 focus:ring-cyan-700 transition duration-200"
+                />
+              </div>
+            ))}
+            <div className="col-span-full">
+              <label htmlFor="phone" className="text-custom-gray font-sharp-sans-semibold text-custom-base leading-custom font-normal">Phone Number</label>
+              <input
+                id="phone"
+                name="phone"
+                type="tel"
+                value={formData.phone}
+                onChange={handleChange}
+                required
+                className="w-full mt-1 p-3 rounded-md border border-gray-300 shadow-sm focus:border-cyan-500 focus:ring-2 focus:ring-cyan-700 transition duration-200"
+              />
+            </div>
+
+            {[ 
+              { id: 'allergies', label: 'Known Allergies' },
+              { id: 'chronicConditions', label: 'Chronic Conditions' },
+              { id: 'pastSurgeries', label: 'Past Surgeries' },
+              { id: 'currentMedications', label: 'Current Medications' },
+              { id: 'familyHistory', label: 'Family Medical History' }
+            ].map(({ id, label }) => (
+              <div key={id} className="col-span-full mb-4">
+                <label htmlFor={id} className="text-custom-gray font-sharp-sans-semibold text-custom-base leading-custom font-normal">{label}</label>
+                <textarea
+                  id={id}
+                  name={id}
+                  value={formData[id]}
+                  onChange={handleChange}
+                  className="w-full mt-1 p-3 rounded-md border border-gray-300 shadow-sm focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500 transition duration-200"
+                  placeholder={`Enter ${label.toLowerCase()}`}
+                />
+              </div>
+            ))}
+          </div>
+
+          <button
+            type="submit"
+            className="w-full bg-cyan-500 hover:bg-cyan-700 text-white font-font-sharp-sans-semibold py-3 rounded-md shadow-md transition duration-200"
+          >
+            Save Profile
+          </button>
+        </form>
+      </div>
     </div>
+    
   );
 }
 

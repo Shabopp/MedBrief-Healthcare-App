@@ -5,6 +5,9 @@ import { useAuth } from '../context/AuthContext';
 import { transcribeAudio } from '../api/assemblyAI';
 import { summarizeAndExtractPrescription } from '../api/gemini';
 import React, { useEffect, useState, useRef } from 'react';
+import { reviewTranscription } from '../api/geminiReviewModel';
+import { format, parseISO } from 'date-fns';
+import { zonedTimeToUtc, fromZonedTime  } from 'date-fns-tz';
 
 function DoctorAppointments() {
   const { currentUser } = useAuth();
@@ -21,38 +24,63 @@ function DoctorAppointments() {
       where('doctor_id', '==', currentUser.uid),
       where('status', 'in', ['pending', 'approved'])
     );
-
+  
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      const updatedAppointments = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+      const updatedAppointments = snapshot.docs.map((doc) => {
+        const appointment = doc.data();
+        return {
+          ...appointment,
+          id: doc.id,
+          appointment_time: format(
+            fromZonedTime(new Date(appointment.appointment_time), Intl.DateTimeFormat().resolvedOptions().timeZone),
+            'MM/dd/yyyy, h:mm:ss a'
+          ),
+        };
+      });
       setAppointments(updatedAppointments);
     });
-
+  
     return () => unsubscribe();
   }, [currentUser]);
-
+  
   const handleApprove = async (appointmentId, doctorId, slotIndex) => {
+    if (!appointmentId || !doctorId || slotIndex == null) {
+      console.error("Missing parameters: appointmentId, doctorId, or slotIndex");
+      return;
+    }
+  
     try {
       const appointmentRef = doc(firestore, 'appointments', appointmentId);
       await updateDoc(appointmentRef, { status: 'approved' });
-
+  
       const doctorRef = doc(firestore, 'users', doctorId);
       const doctorDoc = await getDoc(doctorRef);
       const doctorData = doctorDoc.data();
-
-      doctorData.availableSlots[slotIndex].status = 'booked';
-      await updateDoc(doctorRef, { availableSlots: doctorData.availableSlots });
-
+  
+      if (doctorData && doctorData.availableSlots[slotIndex]) {
+        doctorData.availableSlots[slotIndex].status = 'booked';
+        await updateDoc(doctorRef, { availableSlots: doctorData.availableSlots });
+      } else {
+        console.error("Invalid slot index or missing availableSlots in doctor data");
+      }
+  
       alert('Appointment approved and slot booked');
     } catch (error) {
       console.error('Error approving appointment:', error);
     }
   };
-
+  
+  
   const handleDecline = async (appointmentId) => {
+    if (!appointmentId) {
+      console.error("Missing parameter: appointmentId");
+      return;
+    }
+  
     try {
       const appointmentRef = doc(firestore, 'appointments', appointmentId);
       await updateDoc(appointmentRef, { status: 'declined' });
-
+  
       alert('Appointment declined');
     } catch (error) {
       console.error('Error declining appointment:', error);
@@ -85,7 +113,7 @@ function DoctorAppointments() {
     };
   };
 
-  const handleAudioUpload = async (audioFile, appointmentId) => {
+const handleAudioUpload = async (audioFile, appointmentId) => {
     try {
       setIsLoading(true);
 
@@ -94,11 +122,12 @@ function DoctorAppointments() {
       const audioUrl = await getDownloadURL(storageRef);
 
       const { transcript } = await transcribeAudio(audioUrl);
-      const { summary, medicines } = await summarizeAndExtractPrescription(transcript);
+      const { reviewedTranscription,summary, medicines } = await summarizeAndExtractPrescription(transcript);
 
       const appointmentRef = doc(firestore, 'appointments', appointmentId);
       await updateDoc(appointmentRef, {
         transcription: transcript,
+        reviewed_transcription: reviewedTranscription,
         summary,
         prescriptions: medicines,
         status: 'completed',
@@ -115,10 +144,9 @@ function DoctorAppointments() {
   const renderAppointmentTime = (appointment) => {
     const appointmentTimeString = appointment.appointment_time;
     if (appointmentTimeString) {
-      const dateTime = new Date(appointmentTimeString);
-      if (!isNaN(dateTime.getTime())) {
-        return dateTime.toLocaleString();
-      }
+      // Convert from UTC to local time zone for display
+      const appointmentTimeLocal = fromZonedTime(new Date(appointmentTimeString), Intl.DateTimeFormat().resolvedOptions().timeZone);
+      return format(appointmentTimeLocal, 'MM/dd/yyyy, h:mm:ss a');
     }
     return 'Appointment time not available';
   };
@@ -135,22 +163,21 @@ function DoctorAppointments() {
             className="mb-6 p-6 bg-white border border-gray-200 rounded-lg shadow-sm hover:shadow-md transition-shadow duration-200"
           >
             <h3 className="text-xl font-medium text-gray-800 mb-2">Patient: {appointment.patient_id}</h3>
-            <p className="text-gray-600">Reason: {appointment.reason}</p>
+            <p className="text-gray-600">Reason: || N/a</p>
             <p className="text-gray-600">Status: {appointment.status}</p>
             <p className="text-gray-600">Appointment Time: {renderAppointmentTime(appointment)}</p>
 
             <div className="mt-4 flex space-x-4">
-              <button
-                onClick={() => handleApprove(appointment.id, appointment.doctor_id, appointment.slotIndex)}
-                disabled={appointment.status === 'approved' || appointment.status === 'declined'}
-                className={`px-4 py-2 rounded-lg font-semibold text-white transition-colors duration-150 ${
-                  appointment.status === 'approved'
-                    ? 'bg-green-300 cursor-not-allowed'
-                    : 'bg-green-500 hover:bg-green-600'
-                } disabled:opacity-50`}
-              >
-                {appointment.status === 'approved' ? 'Approved' : 'Approve'}
-              </button>
+            <button
+  onClick={() => handleApprove(appointment.id, appointment.doctor_id, appointment.slotIndex)}
+  disabled={appointment.status === 'approved' || appointment.status === 'declined'}
+  className={`px-4 py-2 rounded-lg font-semibold text-white transition-colors duration-150 ${
+    appointment.status === 'approved' ? 'bg-green-300 cursor-not-allowed' : 'bg-green-500 hover:bg-green-600'
+  } disabled:opacity-50`}
+>
+  {appointment.status === 'approved' ? 'Approved' : 'Approve'}
+</button>
+
               <button
                 onClick={() => handleDecline(appointment.id)}
                 disabled={appointment.status === 'approved' || appointment.status === 'declined'}

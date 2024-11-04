@@ -26,7 +26,7 @@ export const transcribeAudio = async (audioUrl) => {
       const transcriptResponse = await axios.get(
         `https://api.assemblyai.com/v2/transcript/${transcriptId}`,
         {
-          headers: { 'authorization': '8db5b577dc8d445eb9176535adb1393e' },
+          headers: { 'authorization': process.env.REACT_APP_ASSEMBLYAI_KEY },
         }
       );
 

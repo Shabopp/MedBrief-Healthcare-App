@@ -193,6 +193,10 @@ function PatientPage() {
                 <p className="text-gray-600 mt-2">
                   <strong>Transcription:</strong> {appointment.transcription}
                 </p>
+              )} {appointment.reviewed_transcription && (
+                <p className="text-gray-600 mt-2">
+                  <strong>Reviewed Transcription:</strong> {appointment.reviewed_transcription}
+                </p>
               )}
               {appointment.summary && (
                 <p className="text-gray-600 mt-2">

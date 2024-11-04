@@ -1,11 +1,11 @@
 // src/context/AuthContext.js
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react'; 
 import { auth, firestore } from '../firebase/firebase';
 import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
   onAuthStateChanged,
-  signOut, // Import signOut function from Firebase
+  signOut,
   setPersistence,
   browserSessionPersistence,
 } from 'firebase/auth';
@@ -26,10 +26,14 @@ export const AuthProvider = ({ children }) => {
       .then(() => {
         const unsubscribe = onAuthStateChanged(auth, async (user) => {
           if (user) {
-            setCurrentUser(user);
             const userDoc = await getDoc(doc(firestore, 'users', user.uid));
             if (userDoc.exists()) {
-              setRole(userDoc.data().role);
+              const userData = userDoc.data();
+              setCurrentUser({
+                ...user,
+                photoURL: userData.profilePhotoUrl || null, // Fetch and set photo URL
+              });
+              setRole(userData.role);
             }
           } else {
             setCurrentUser(null);
@@ -45,7 +49,6 @@ export const AuthProvider = ({ children }) => {
       });
   }, []);
 
-  // Define the logout function
   const logout = async () => {
     try {
       await signOut(auth);
@@ -68,6 +71,7 @@ export const AuthProvider = ({ children }) => {
         specialization,
         experience,
         profileCompleted: false,
+        profilePhotoUrl: null, // Initialize profile photo URL as null
       });
 
       await signOut(auth);

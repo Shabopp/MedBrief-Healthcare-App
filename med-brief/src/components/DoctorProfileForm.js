@@ -1,5 +1,3 @@
-
-
 import React, { useState, useEffect } from 'react';
 import { firestore, storage } from '../firebase/firebase';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
@@ -69,35 +67,54 @@ export default function DoctorProfileForm() {
 
   // Generate available slots based on working hours and slot duration
   const generateSlots = () => {
-    const slots = [];
+    const newSlots = [];
     const startTime = parse(workingHours.start, 'HH:mm', new Date());
     const endTime = parse(workingHours.end, 'HH:mm', new Date());
     let currentSlot = startTime;
-
-    if (formData.availableSlots.some(slot => slot.date === format(selectedDate, 'yyyy-MM-dd'))) {
-      alert('Slots for this date are already created.');
-      return;
-    }
-
+  
+    const selectedDateStr = format(selectedDate, 'yyyy-MM-dd');
+  
+    // Loop to create new slots based on working hours and slot duration
     while (currentSlot < endTime) {
       const slotEnd = addMinutes(currentSlot, slotDuration);
       if (slotEnd <= endTime) {
-        slots.push({
-          date: format(selectedDate, 'yyyy-MM-dd'),
+        const newSlot = {
+          date: selectedDateStr,
           start: format(currentSlot, 'HH:mm'),
           end: format(slotEnd, 'HH:mm'),
           status: 'available',
-        });
+        };
+  
+        // Check if this slot already exists in formData.availableSlots
+        const existingSlot = formData.availableSlots.find(
+          (slot) =>
+            slot.date === newSlot.date &&
+            slot.start === newSlot.start &&
+            slot.end === newSlot.end
+        );
+  
+        // If an existing slot is found, keep its current status; otherwise, add the new slot
+        if (existingSlot) {
+          newSlots.push(existingSlot);  // Preserve existing slot with its status
+        } else {
+          newSlots.push(newSlot);  // Add new slot as available
+        }
       }
       currentSlot = slotEnd;
     }
-
+  
+    // Merge newSlots with existing availableSlots, preserving booked slots
+    const updatedSlots = [
+      ...formData.availableSlots.filter(slot => slot.date !== selectedDateStr), // keep slots from other dates
+      ...newSlots, // add/merge slots for the selected date
+    ];
+  
     setFormData((prev) => ({
       ...prev,
-      availableSlots: [...prev.availableSlots, ...slots],
+      availableSlots: updatedSlots,
     }));
   };
-
+  
   const removeSlot = (index) => {
     setFormData((prev) => ({
       ...prev,
