@@ -67,20 +67,7 @@ function FlipFormModal({ questions, onFinish, isVisible, closeModal }) {
         </div>
 
         {/* Quit and Next Buttons */}
-        <div className="flex justify-end gap-3 mt-6 px-4 py-3">
-          <button
-            className="flex min-w-[84px] items-center justify-center h-10 px-4 bg-[#e7edf3] text-[#0e141b] text-sm font-bold leading-normal rounded-xl hover:bg-[#d0dbe7]"
-            onClick={handleNextQuestion}
-          >
-            Next
-          </button>
-          <button
-            className="flex min-w-[84px] items-center justify-center h-10 px-4 bg-transparent text-[#0e141b] text-sm font-bold leading-normal rounded-xl hover:text-gray-800"
-            onClick={closeModal}
-          >
-            Quit
-          </button>
-        </div>
+
       </div>
     </div>
   );

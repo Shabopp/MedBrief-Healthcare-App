@@ -14,7 +14,7 @@ const preAppointmentQuestions = [
     key: 'primaryReason',
     label: 'What is your primary reason for scheduling this appointment?',
     type: 'mcq',
-    options: ['Routine check-up', 'New symptoms', 'Chronic condition management', 'Other'],
+    options: ['Routine check-up', 'New symptoms', 'Chronic condition management', 'New Patient', 'Other'],
   },
   {
     key: 'recentChanges',
@@ -34,12 +34,7 @@ const preAppointmentQuestions = [
     type: 'mcq',
     options: ['Yes', 'No'],
   },
-  {
-    key: 'allergies',
-    label: 'Do you have any allergies?',
-    type: 'mcq',
-    options: ['Yes', 'No'],
-  },
+
   {
     key: 'allergyDetails',
     label: 'If yes, please list your allergies.',
@@ -153,11 +148,7 @@ const preAppointmentQuestions = [
     type: 'mcq',
     options: ['Less than 2 glasses', '2-4 glasses', '5-7 glasses', '8+ glasses'],
   },
-  {
-    key: 'additionalComments',
-    label: 'Do you have any additional comments or concerns you would like to discuss during your appointment?',
-    type: 'text',
-  },
+  
 ];
 
 function DoctorList() {
@@ -168,6 +159,7 @@ function DoctorList() {
   const [selectedDoctor, setSelectedDoctor] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState(new Date()); // Initial selected date
+  const [visibleCards, setVisibleCards] = useState([]);
 
   useEffect(() => {
     const fetchDoctors = () => {
@@ -191,6 +183,14 @@ function DoctorList() {
 
     fetchDoctors();
   }, []);
+  useEffect(() => {
+    // Sequentially add each doctor card to the visibleCards array with a delay
+    doctors.forEach((_, index) => {
+      setTimeout(() => {
+        setVisibleCards((prev) => [...prev, index]);
+      }, index * 150); // Adjust the delay as needed for smoothness
+    });
+  }, [doctors]);
 
   useEffect(() => {
     const checkPreAppointmentStatus = async () => {
@@ -219,33 +219,27 @@ function DoctorList() {
         return;
       }
   
+      // Filter available slots to only include slots for the selected date
+      const selectedDateSlots = doctorData.availableSlots.filter(slot => slot.date === format(selectedDate, 'yyyy-MM-dd'));
+  
       // Select and mark the slot as booked
-      const updatedSlots = doctorData.availableSlots.map((slot, idx) => {
+      const updatedSlots = selectedDateSlots.map((slot, idx) => {
         if (idx === slotIndex) {
           return {
             ...slot,
-            date: format(selectedDate, 'yyyy-MM-dd'), // Ensure date matches the selected date
             status: 'booked'
           };
         }
         return slot;
       });
   
-      // Remove any potential duplicates with the same start time and date
-      const uniqueSlots = updatedSlots.filter(
-        (slot, idx, self) =>
-          idx === self.findIndex(
-            (s) => s.date === slot.date && s.start === slot.start
-          )
-      );
-  
-      // Update the Firestore document with the unique slots
-      await updateDoc(doctorRef, { availableSlots: uniqueSlots });
+      // Update the Firestore document with the updated slots
+      await updateDoc(doctorRef, { availableSlots: [...doctorData.availableSlots.filter(slot => slot.date !== format(selectedDate, 'yyyy-MM-dd')), ...updatedSlots] });
   
       // Add the booked appointment to the 'appointments' collection
-      const selectedSlot = uniqueSlots[slotIndex];
-      const slotDateTime = `${format(selectedDate, 'yyyy-MM-dd')}T${selectedSlot.start}:00`;
-      const appointmentTimeUtc = new Date(slotDateTime).toISOString();
+      const selectedSlot = updatedSlots[slotIndex];
+      const slotDateTime = new Date(`${format(selectedDate, 'yyyy-MM-dd')}T${selectedSlot.start}:00`);
+      const appointmentTimeUtc = slotDateTime.toISOString();
   
       await addDoc(collection(firestore, 'appointments'), {
         doctor_id: doctorId,
@@ -273,10 +267,11 @@ function DoctorList() {
         <p className="text-center text-gray-500">No doctors available.</p>
       ) : (
         <div className="grid gap-6 grid-cols-1">
-          {doctors.map((doctor) => (
+          {doctors.map((doctor,index) => (
             <DoctorCard
               key={doctor.id}
               doctor={doctor}
+              isVisible={visibleCards.includes(index)}
               onBookAppointment={() => {
                 setSelectedDoctor(doctor);
                 if (!isPreAppointmentCompleted) {

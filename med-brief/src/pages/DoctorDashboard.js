@@ -1,9 +1,15 @@
 import React, { useEffect, useState } from 'react';
 import { firestore } from '../firebase/firebase';
-import { collection, query, where, getDocs, doc, getDoc } from 'firebase/firestore';
+import { collection, query, where, getDocs, doc, getDoc,Timestamp,orderBy } from 'firebase/firestore';
 import { useAuth } from '../context/AuthContext';
 import autoTable from 'jspdf-autotable';
 import { jsPDF } from 'jspdf';
+import dayjs from 'dayjs';
+import recentAppointments from './recentAppointments';
+import TodaysAppointments from './TodaysAppointments';
+
+
+
 
 function DoctorDashboard() {
   const { currentUser } = useAuth();
@@ -11,23 +17,130 @@ function DoctorDashboard() {
   const [selectedPatient, setSelectedPatient] = useState(null);
   const [appointments, setAppointments] = useState([]);
   const [doctor, setDoctor] = useState(null);
+  
 
+ 
+  
+  const fetchTodaysAppointments = async (doctorId) => {
+    try {
+      const today = new Date();
+      const todayStart = new Date(today);
+      todayStart.setHours(0, 0, 0, 0); // Start of the day (00:00:00)
+      const todayEnd = new Date(today);
+      todayEnd.setHours(23, 59, 59, 999); // End of the day (23:59:59)
+  
+      // Convert to ISO string format for consistency in query
+      const todayStartISO = todayStart.toISOString();
+      const todayEndISO = todayEnd.toISOString();
+  
+      console.log("Fetching appointments between:", todayStartISO, "and", todayEndISO);
+  
+      // Firestore query using string comparison for ISO date strings
+      const appointmentQuery = query(
+        collection(firestore, 'appointments'),
+        where('doctor_id', '==', doctorId),
+        where('appointment_time', '>=', todayStartISO),
+        where('appointment_time', '<=', todayEndISO),
+        where('status', '==', 'approved')  // Added condition for approved status
+      );
+  
+      const snapshot = await getDocs(appointmentQuery);
+      const fetchedAppointments = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+  
+      console.log("Fetched appointments:", fetchedAppointments);
+      return fetchedAppointments;
+    } catch (error) {
+      console.error('Error fetching today’s appointments:', error);
+      return [];
+    }
+  };
+  
+  
+  const fetchRecentAppointments = async (doctorId) => {
+    try {
+      const today = new Date();
+  
+      // Set the start of the day for today (00:00:00)
+      const todayStart = new Date(today);
+      todayStart.setHours(0, 0, 0, 0);
+  
+      // Set the end of the day for today (23:59:59)
+      const todayEnd = new Date(today);
+      todayEnd.setHours(23, 59, 59, 999);
+  
+      // Calculate the date for 5 days ago
+      const fiveDaysAgo = new Date(today);
+      fiveDaysAgo.setDate(today.getDate() - 7);
+  
+      // Set the start of the day for 5 days ago (00:00:00)
+      fiveDaysAgo.setHours(0, 0, 0, 0);
+  
+      // Convert both to ISO string format for Firestore query (ensure consistency with Firestore data format)
+      const fiveDaysAgoStartISO = fiveDaysAgo.toISOString();
+      const todayEndISO = todayEnd.toISOString();
+  
+      // Log the date range being used in the query
+      console.log("Fetching appointments between:");
+      console.log(fiveDaysAgoStartISO, "and", todayEndISO);
+  
+      // Firestore query using ISO date strings
+      const appointmentQuery = query(
+        collection(firestore, 'appointments'),
+        where('doctor_id', '==', doctorId),
+        where('appointment_time', '>=', fiveDaysAgoStartISO),
+        where('appointment_time', '<=', todayEndISO)
+      );
+  
+      const snapshot = await getDocs(appointmentQuery);
+      const fetchedAppointments = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+  
+      // Log the fetched appointments to check the results
+      console.log("Fetched recent appointments:", fetchedAppointments);
+      return fetchedAppointments;
+    } catch (error) {
+      console.error("Error fetching recent appointments:", error);
+      return [];
+    }
+  };
+  
+  
+  
+
+  
   useEffect(() => {
     const fetchData = async () => {
       if (!currentUser) return;
 
+      // Fetch doctor information
       const doctorDoc = await getDoc(doc(firestore, 'users', currentUser.uid));
       if (doctorDoc.exists()) {
         setDoctor(doctorDoc.data());
       }
 
+      // Fetch appointments
       const appointmentQuery = query(collection(firestore, 'appointments'), where('doctor_id', '==', currentUser.uid));
       const snapshot = await getDocs(appointmentQuery);
       const fetchedAppointments = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+      
+      // Fetch today's appointments
+      const fetchedTodaysAppointments = await fetchTodaysAppointments(currentUser.uid);
+      setAppointments(fetchedTodaysAppointments);
 
-      const uniquePatientIds = new Set();
-      fetchedAppointments.forEach((appointment) => uniquePatientIds.add(appointment.patient_id));
+      // Fetch recent appointments
+      const fetchedRecentAppointments = await fetchRecentAppointments(currentUser.uid);
+      setAppointments(fetchedRecentAppointments);
 
+      //fetch pre-appointment questionnaire data
+
+
+      // Fetch unique patients
+      const uniquePatientIds = new Set(fetchedAppointments.map(appointment => appointment.patient_id));
       const patientDetails = await Promise.all(
         Array.from(uniquePatientIds).map(async (patientId) => {
           const patientDoc = await getDoc(doc(firestore, 'users', patientId));
@@ -35,7 +148,8 @@ function DoctorDashboard() {
         })
       );
 
-      setPatients(patientDetails.filter((patient) => patient !== null));
+
+      setPatients(patientDetails.filter(patient => patient !== null));
       setAppointments(fetchedAppointments);
     };
 
@@ -150,6 +264,12 @@ function DoctorDashboard() {
           </div>
         </div>
 
+        <TodaysAppointments
+          fetchTodaysAppointments={fetchTodaysAppointments}
+          currentUserId={currentUser.uid}
+        />
+      
+
         {selectedPatient ? (
           <PatientDetail
             patient={selectedPatient}
@@ -161,10 +281,16 @@ function DoctorDashboard() {
         ) : (
           <PatientList patients={patients} onPatientClick={handlePatientClick} />
         )}
+  <recentAppointments
+          fetchRecentAppointments={fetchRecentAppointments}
+          currentUserId={currentUser.uid}
+        />
+        
       </div>
     </div>
   );
 }
+
 
 function PatientList({ patients, onPatientClick }) {
   return (
@@ -235,7 +361,7 @@ function PatientDetail({ patient, doctor, appointments, onBack, onGeneratePDF })
   return (
     <div className="bg-white p-8 shadow-xl w-full">
       <button onClick={onBack} className="text-blue-500 mb-4">← Back to Patients</button>
-
+            
       {/* Patient Profile Header */}
       <div className="flex items-center mb-6">
         {/* Profile Photo */}
@@ -326,7 +452,30 @@ function PatientDetail({ patient, doctor, appointments, onBack, onGeneratePDF })
   );
 }
 
+const getPreAppointmentQuestionnaireData = async (patientId) => {
+  try {
+    const patientRef = doc(firestore, 'patients', patientId);
+    const patientDoc = await getDoc(patientRef);
 
+    if (patientDoc.exists()) {
+      const preAppointmentAnswers = patientDoc.data().preAppointmentAnswers;
+      
+
+      if (preAppointmentAnswers) {
+        return preAppointmentAnswers;
+      } else {
+        console.log('Pre-appointment questionnaire data not found');
+        return null;
+      }
+    } else {
+      console.log('Patient not found');
+      return null;
+    }
+  } catch (error) {
+    console.error('Error fetching pre-appointment questionnaire data:', error);
+    return null;
+  }
+};
 
 function AppointmentCard({ appointment, onGeneratePDF }) {
   return (

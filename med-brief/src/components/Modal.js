@@ -1,101 +1,163 @@
-// src/components/Modal.js
-import React, { useState } from 'react';
-import { format } from 'date-fns';
+import React, { useState, useEffect } from "react";
+import { format } from "date-fns";
+import { MapPin, Star, X,Stethoscope } from "lucide-react";
 
-const Modal = ({ isOpen, doctor, selectedDate, nextSevenDays, setSelectedDate, handleBookSlot, closeModal }) => {
-  const [selectedSlotIndex, setSelectedSlotIndex] = useState(null); // Track selected slot
+function Modal({
+  isOpen,
+  doctor,
+  selectedDate,
+  nextSevenDays,
+  setSelectedDate,
+  handleBookSlot,
+  closeModal,
+  doctorMetrics ,
+}) {
+  const [selectedSlotIndex, setSelectedSlotIndex] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    if (isOpen) {
+      setIsLoading(true);
+      // Simulate loading time for a smooth transition effect
+      const timer = setTimeout(() => setIsLoading(false), 300);
+      return () => clearTimeout(timer);
+    }
+  }, [isOpen]);
+
+  const handleSlotSelection = (index) => setSelectedSlotIndex(index);
+
+  const slotStatusStyles = (status) =>
+    status === "available"
+      ? "bg-cyan-300 text-[#333333] hover:bg-cyan-400 transition-colors duration-200 ease-in-out cursor-pointer font-semibold"
+      : "bg-gray-100 text-gray-400 cursor-not-allowed";
 
   if (!isOpen || !doctor) return null;
 
-  const handleSlotSelection = (index) => {
-    setSelectedSlotIndex(index); // Set selected slot when radio button is clicked
-  };
-
-  const slotStatusStyles = (slot) => {
-    return slot.status === 'available'
-      ? 'border-green-500 text-green-600 bg-green-50 hover:bg-green-100'
-      : 'border-red-500 text-red-600 bg-red-50 hover:bg-red-100';
-  };
-
-  const slotStatusIcon = (slot) => {
-    return slot.status === 'available' ? (
-      <svg className="w-6 h-6 text-green-500" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7"></path>
-      </svg>
-    ) : (
-      <svg className="w-6 h-6 text-red-500" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-        <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-      </svg>
-    );
-  };
-
   return (
-    <div id="select-modal" className="fixed inset-0 flex items-center justify-center bg-gray-800 bg-opacity-50 z-50">
-      <div className="bg-white rounded-lg shadow-lg w-full max-w-lg p-6 max-h-[90vh] overflow-auto">
-        <div className="flex items-center justify-between">
-          <h3 className="text-lg font-semibold text-gray-900">Book Appointment</h3>
-          <button onClick={closeModal} className="text-gray-400 hover:bg-gray-200 rounded-lg text-sm h-8 w-8">
-            <svg className="w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 14 14">
-              <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="m1 1 6 6m0 0 6 6M7 7l6-6M7 7l-6 6" />
-            </svg>
-          </button>
-        </div>
-
-        <div className="mt-4">
-          <h4 className="text-lg font-semibold">Select a date:</h4>
-          <div className="grid grid-cols-7 gap-2 my-4">
-            {nextSevenDays.map((date, index) => (
-              <button
-                key={index}
-                onClick={() => setSelectedDate(date)}
-                className={`p-2 rounded-md text-center ${selectedDate === date ? 'bg-blue-200' : 'bg-gray-100'}`}
-              >
-                <div className="text-sm">{format(date, 'EEE')}</div>
-                <div className="text-lg font-bold">{format(date, 'd')}</div>
-              </button>
-            ))}
-          </div>
-
-          <h4 className="text-lg font-semibold">Available Slots:</h4>
-          <ul className="space-y-2 max-h-48 overflow-y-auto">
-            {doctor.availableSlots
-              ?.filter(slot => slot.date === format(selectedDate, 'yyyy-MM-dd'))
-              .map((slot, index) => (
-                <li key={index} className={`flex items-center justify-between p-4 border rounded-md shadow-md cursor-pointer ${slotStatusStyles(slot)}`} onClick={() => handleSlotSelection(index)}>
-                  <div className="flex items-center space-x-3">
-                    <input
-                      type="radio"
-                      name="slot"
-                      value={index}
-                      onChange={() => handleSlotSelection(index)}
-                      checked={selectedSlotIndex === index}
-                      className="h-4 w-4 text-blue-600"
-                    />
-                    <span className="text-lg font-medium">
-                      {slot.start} - {slot.end}
-                    </span>
-                  </div>
-                  <div className="tooltip flex items-center space-x-2">
-                    {slotStatusIcon(slot)}
-                    <span className="tooltip-text bg-gray-700 text-white rounded-lg px-2 py-1 text-xs">
-                      {slot.status === 'available' ? 'Available' : 'Booked'}
-                    </span>
-                  </div>
-                </li>
-              ))}
-          </ul>
-
+    <div
+      className={`fixed inset-0 flex items-center justify-center bg-black bg-opacity-60 transition-opacity duration-300 ${
+        isOpen ? "opacity-100" : "opacity-0 pointer-events-none"
+      }`}
+    >
+      <div
+        className={`bg-white rounded-2xl shadow-xl max-w-lg w-full p-6 transform transition-transform duration-300 ${
+          isOpen ? "scale-100 opacity-100" : "scale-95 opacity-0"
+        }`}
+      >
+        {/* Close Button */}
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-2xl font-bold text-gray-800">Book an Appointment</h2>
           <button
-            disabled={selectedSlotIndex === null}
-            onClick={() => handleBookSlot(doctor.id, selectedSlotIndex)}
-            className="mt-4 w-full bg-blue-600 text-white py-2.5 rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
+            onClick={closeModal}
+            className="text-gray-600 hover:text-gray-800 transition-colors"
           >
-            Book Slot
+            <X className="w-6 h-6" />
           </button>
         </div>
+
+        {isLoading ? (
+          // Loading Spinner
+          <div className="flex justify-center items-center h-48">
+            <div className="animate-spin rounded-full h-12 w-12 border-t-4 border-blue-500"></div>
+          </div>
+        ) : (
+          // Modal Content
+          <>
+            {/* Doctor Info */}
+            <div className="flex items-start space-x-4 mb-6">
+              <div className="h-20 w-20 rounded-full overflow-hidden bg-gray-200 flex items-center justify-center shadow-md">
+                {doctor.profilePictureUrl ? (
+                  <img
+                    src={doctor.profilePictureUrl}
+                    alt={doctor.fullName}
+                    className="object-cover w-full h-full"
+                  />
+                ) : (
+                  <span className="text-xl font-semibold text-gray-600">
+                    {doctor.fullName.split(" ").map((n) => n[0]).join("")}
+                  </span>
+                )}
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900">
+                  Dr. {doctor.fullName}
+                </h3>
+                <p className="text-sm text-gray-500">{doctor.specialization}</p>
+                <div className="flex items-center space-x-1">
+                  <Stethoscope  className="w-4 h-4 text-gray-500" />
+                  <span className="text-sm font-medium">{doctor.degrees ?? "N/A"}</span>
+                  <span className="text-sm text-gray-500">• {doctor.phone ?? 0} </span>
+                </div>
+                <div className="flex items-center space-x-1 text-gray-500">
+                  <MapPin className="w-4 h-4" />
+                  <span className="text-sm">{doctor.clinicAddress}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Date Selector */}
+            <div>
+              <h4 className="font-semibold mb-2 text-gray-800">Select a date:</h4>
+              <div className="flex overflow-x-auto space-x-2 py-2">
+                {nextSevenDays.map((date, index) => (
+                  <button
+                    key={index}
+                    onClick={() => setSelectedDate(date)}
+                    className={`w-20 px-4 py-2 rounded-lg shadow-sm transition-all duration-200 ${
+                      selectedDate === date
+                        ? "bg-blue-600 text-white"
+                        : "border border-gray-300 text-gray-700 hover:bg-gray-100"
+                    }`}
+                  >
+                    <div className="text-center">
+                      <div className="text-sm font-normal">{format(date, "EEE")}</div>
+                      <div className="text-2xl font-bold">{format(date, "d")}</div>
+                    </div>
+                  </button>
+                ))}
+              </div>
+
+              {/* Available Slots */}
+              {selectedDate && (
+                <>
+                  <h4 className="font-semibold mt-6 mb-2 text-gray-800">
+                    Available Slots:
+                  </h4>
+                  <div className="grid grid-cols-3 gap-2">
+                    {doctor.availableSlots.filter((slot) => slot.date === format(selectedDate, "yyyy-MM-dd")).length > 0 ? (
+                      doctor.availableSlots
+                        .filter((slot) => slot.date === format(selectedDate, "yyyy-MM-dd"))
+                        .map((slot, index) => (
+                          <button
+                            key={index}
+                            onClick={() => handleSlotSelection(index)}
+                            className={`px-4 py-2 rounded-lg text-sm shadow-sm  ${slotStatusStyles(slot.status)}`}
+                            disabled={slot.status !== "available"}
+                          >
+                            {slot.start} - {slot.end}
+                          </button>
+                        ))
+                    ) : (
+                      <p className="text-sm text-gray-500">No available appointments.</p>
+                    )}
+                  </div>
+                </>
+              )}
+            </div>
+
+            {/* Book Slot Button */}
+            <button
+              onClick={() => handleBookSlot(doctor.id, selectedSlotIndex)}
+              disabled={selectedSlotIndex === null}
+              className="w-full mt-6 py-2 rounded-lg bg-blue-600 text-white font-semibold shadow-md hover:bg-blue-700 transition-all duration-200 disabled:bg-gray-300"
+            >
+              Book Slot
+            </button>
+          </>
+        )}
       </div>
     </div>
   );
-};
+}
 
 export default Modal;

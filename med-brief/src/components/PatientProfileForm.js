@@ -3,9 +3,10 @@ import { firestore, storage } from '../firebase/firebase';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { useAuth } from '../context/AuthContext';
-
+import { Link, useNavigate } from 'react-router-dom';
 function PatientProfileForm() {
   const { currentUser } = useAuth();
+  const navigate = useNavigate();
   const [formData, setFormData] = useState({
     fullName: '',
     dob: '',
@@ -71,6 +72,7 @@ function PatientProfileForm() {
         profileCompleted: true,
       }, { merge: true });
       alert('Profile saved successfully!');
+      navigate('/doctors');
     } catch (error) {
       console.error('Error saving profile:', error);
     }
@@ -232,6 +234,7 @@ function PatientProfileForm() {
 
           <button
             type="submit"
+          
             className="w-full bg-cyan-500 hover:bg-cyan-700 text-white font-font-sharp-sans-semibold py-3 rounded-md shadow-md transition duration-200"
           >
             Save Profile

@@ -53,7 +53,7 @@ function FlipForm({ question, isLastQuestion, onAnswer, onFinish }) {
             >
               <input
                 type="radio"
-                className="h-5 w-5 border-2 border-[#d0dbe7] bg-transparent text-transparent checked:border-[#1568c1] checked:bg-[image:var(--radio-dot-svg)] focus:outline-none focus:ring-0 focus:ring-offset-0"
+                className="h-5 w-5 border-2 border-[#d0dbe7] bg-transparent text-transparent checked:border-[#333333] checked:bg-[image:var(--radio-dot-svg)] focus:outline-none focus:ring-0 focus:ring-offset-0"
                 name={`question-${question.key}`}
                 value={option}
                 checked={selectedAnswer === option}
@@ -76,7 +76,7 @@ function FlipForm({ question, isLastQuestion, onAnswer, onFinish }) {
 
       {/* Show Next or Finish button based on the question */}
       <button
-        className={`mt-8 ${selectedAnswer ? 'bg-blue-600' : 'bg-gray-400'} text-white text-lg font-semibold rounded-lg py-3 px-6 w-full transition`}
+        className={`mt-8 ${selectedAnswer ? 'bg-black' : 'bg-gray-400'} text-white text-lg font-semibold rounded-lg py-3 px-6 w-full transition`}
         onClick={isLastQuestion ? handleSubmit : handleNext}
         disabled={!selectedAnswer}
       >

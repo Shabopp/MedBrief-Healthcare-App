@@ -1,15 +1,19 @@
 import React, { useEffect, useState } from 'react';
 import { AiFillStar, AiFillHeart } from 'react-icons/ai';
 import { FaMapMarkerAlt, FaGraduationCap } from 'react-icons/fa';
-import { format, parseISO, addDays, isWithinInterval, eachDayOfInterval } from 'date-fns';
+import { startOfDay,format, parseISO, addDays, isWithinInterval, eachDayOfInterval } from 'date-fns';
 import { doc, getDoc } from 'firebase/firestore';
 import { firestore } from '../firebase/firebase';
+import { useAuth } from '../context/AuthContext';
 
-const DoctorCard = ({ doctor, onBookAppointment }) => {
+
+const DoctorCard = ({ doctor, onBookAppointment,isVisible  }) => {
   const [availability, setAvailability] = useState([]);
-  const rating = doctor.rating || (Math.random() * 1.5 + 3.5).toFixed(1);
-  const reviews = doctor.reviews || Math.floor(Math.random() * 450 + 50);
-  const isLoyalPatient = true;
+  const [doctorMetrics, setDoctorMetrics] = useState({
+    rating: null,
+    reviews: null,
+    recommendationText: '',
+  });
 
   const recommendationOptions = [
     "Highly recommended · Excellent wait time",
@@ -18,24 +22,55 @@ const DoctorCard = ({ doctor, onBookAppointment }) => {
     "Patient-centered care · Quick appointments",
     "Professional and caring · Efficient service",
   ];
-  const recommendationText = recommendationOptions[Math.floor(Math.random() * recommendationOptions.length)];
+
+  // Function to initialize unique metrics for each doctor
+  const initializeMetrics = () => {
+    const storedRating = localStorage.getItem(`doctor_${doctor.id}_rating`);
+    const storedReviews = localStorage.getItem(`doctor_${doctor.id}_reviews`);
+    const storedRecommendationText = localStorage.getItem(`doctor_${doctor.id}_recommendationText`);
+
+    // If values are in localStorage, use them; otherwise, generate and store new ones
+    const rating = storedRating || (Math.random() * 1.5 + 3.5).toFixed(1);
+    const reviews = storedReviews || Math.floor(Math.random() * 450 + 50);
+    const recommendationText =
+      storedRecommendationText ||
+      recommendationOptions[Math.floor(Math.random() * recommendationOptions.length)];
+
+    // Store values in localStorage if they were generated
+    if (!storedRating) localStorage.setItem(`doctor_${doctor.id}_rating`, rating);
+    if (!storedReviews) localStorage.setItem(`doctor_${doctor.id}_reviews`, reviews);
+    if (!storedRecommendationText)
+      localStorage.setItem(`doctor_${doctor.id}_recommendationText`, recommendationText);
+
+    // Update the state with persistent or generated values
+    setDoctorMetrics({ rating, reviews, recommendationText });
+
+  };
+ // Get metrics from AuthContext
+  const isLoyalPatient = true;
+
+
 
   useEffect(() => {
+    initializeMetrics();
+    
     const fetchAvailability = async () => {
       const doctorRef = doc(firestore, 'users', doctor.id);
       const doctorDoc = await getDoc(doctorRef);
+  
       if (doctorDoc.exists()) {
         const doctorData = doctorDoc.data();
         const slots = Array.isArray(doctorData.availableSlots) ? doctorData.availableSlots : [];
-
-        const today = new Date();
+  
+        // Set `today` to the start of the day to avoid time component issues
+        const today = startOfDay(new Date());
         const endDate = addDays(today, 13);
-
+  
         const filteredSlots = slots.filter((slot) => {
           const slotDate = parseISO(slot.date);
           return isWithinInterval(slotDate, { start: today, end: endDate });
         });
-
+  
         const groupedByDate = filteredSlots.reduce((acc, slot) => {
           const { date, status } = slot;
           if (!acc[date]) {
@@ -45,16 +80,16 @@ const DoctorCard = ({ doctor, onBookAppointment }) => {
           acc[date].totalCount += 1;
           return acc;
         }, {});
-
+  
         const daysRange = eachDayOfInterval({ start: today, end: endDate });
         const availabilityData = daysRange.map(day => {
           const dateString = format(day, 'yyyy-MM-dd');
           return groupedByDate[dateString] || { date: dateString, availableCount: 0, totalCount: 0 };
         });
-
+  
         setAvailability(availabilityData);
       } else {
-        const today = new Date();
+        const today = startOfDay(new Date());
         const endDate = addDays(today, 13);
         const daysRange = eachDayOfInterval({ start: today, end: endDate });
         const availabilityData = daysRange.map(day => ({
@@ -65,14 +100,22 @@ const DoctorCard = ({ doctor, onBookAppointment }) => {
         setAvailability(availabilityData);
       }
     };
+  
     fetchAvailability();
   }, [doctor.id]);
-
+  
   return (
-    <div className="bg-white p-6 rounded-lg flex flex-row justify-between gap-8 border-b border-gray-300">
+    <div
+    className={`bg-white p-6 rounded-lg flex flex-row justify-between gap-8  border-gray-300 transition-all duration-900 ease-in-out transform ${
+      isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'
+    }`}
+  >
+    <div className="bg-white p-6 rounded-lg flex flex-row justify-between gap-8 border-b border-gray-300" >
+  {/* Left Section */}
   {/* Doctor Info Section */}
-  <div className="flex gap-6 items-start flex-1 ml-5">
-    <div className="w-20 h-20 rounded-full overflow-hidden border-2 border-gray-200">
+  <div className="flex gap-6 items-start flex-1 ml-5 "
+   > 
+    <div className="w-40 h-40 rounded-full overflow-hidden border-2 border-gray-200">
       <img
         src={doctor.profilePictureUrl || '/default-avatar.png'}
         alt={doctor.fullName}
@@ -82,13 +125,13 @@ const DoctorCard = ({ doctor, onBookAppointment }) => {
 
     <div className="space-y-2">
       <div className='gap-2'>
-        <h3
+        <span
           className="sc-ktJbId hxxqJi"
           style={{
             color: '#333333',
             backgroundColor: 'rgba(0, 0, 0, 0)',
             fontFamily: 'sharp-sans-semibold, Arial, sans-serif',
-            fontSize: '20px',
+            fontSize: '24px',
             lineHeight: '28px',
             verticalAlign: 'baseline',
             letterSpacing: 'normal',
@@ -112,25 +155,25 @@ const DoctorCard = ({ doctor, onBookAppointment }) => {
           onMouseLeave={(e) => (e.currentTarget.style.textDecoration = 'none')}
         >
           Dr. {doctor.fullName}
-        </h3>
+        </span>
 
-        <p className="text-[#333333] bg-transparent font-sharp-sans text-[15px] leading-[22px] align-baseline tracking-normal 
-                    m-0 p-0 font-normal text-start">
+        <p className="text-[#333333] bg-transparent font-sharp-sans text-[16px] leading-[22px] align-baseline tracking-normal 
+                    m-0 p-0 font-normal text-start ">
           {doctor.specialization}
         </p>
       </div>
 
       <div className="flex items-center gap-2">
         <div className="flex items-center ">
-          <div className="text-[#333333] bg-black bg-transparent font-sharp-sans text-[14px] leading-[22px] font-normal not-italic tracking-normal m-0 mx-0 p-0 text-start no-underline">
+          <div className="text-[#333333] bg-black bg-transparent font-sharp-sans text-[16px] leading-[22px] font-normal not-italic tracking-normal m-0 mx-0 p-0 text-start no-underline">
             <AiFillStar className="h-4 w-4 fill-yellow-400" />
           </div>
 
-          <span className="ml-1 font-medium text-[#333333]">{rating}</span>
+          <span className="ml-1 font-medium text-[#333333]">{doctorMetrics.rating}</span>
           <span
             className="text-[#333333] bg-transparent font-sharp-sans text-[14px] leading-[22px] align-baseline tracking-normal m-0 p-0 font-normal text-start"
           >
-            · {reviews} reviews
+            · {doctorMetrics.reviews} reviews
           </span>
         </div>
         {isLoyalPatient && (
@@ -151,7 +194,7 @@ const DoctorCard = ({ doctor, onBookAppointment }) => {
       </span>
       <div className="text-sm">
         <span className="text-[#0053C6] font-semibold">New patient appointments</span>
-        <span className="text-gray-600"> · Highly recommended · Excellent wait time</span>
+        <span className="text-gray-600"> · {doctorMetrics.recommendationText}</span>
       </div>
       
     </div>
@@ -167,8 +210,8 @@ const DoctorCard = ({ doctor, onBookAppointment }) => {
         <div
           key={index}
           onClick={() => daySlot.availableCount > 0 && onBookAppointment(daySlot.date)}
-          className={`p-2 text-center rounded-lg cursor-pointer ${
-            daySlot.availableCount > 0 ? 'bg-cyan-300 text-[#333333]' : 'bg-[#EBEAE8] text-[#A6A6A4]'
+          className={`p-2 text-center rounded-lg ${
+            daySlot.availableCount > 0 ? 'bg-cyan-300 text-[#333333] hover:bg-cyan-400 transition-colors duration-200 ease-in-out cursor-pointer hover:scale-105' : 'bg-gray-100  cursor-not-allowed text-[#A6A6A4]'
           }`}
           style={{
             width: 'calc(14.28% - 4px)',
@@ -192,6 +235,7 @@ const DoctorCard = ({ doctor, onBookAppointment }) => {
         View all availability
       </button>
     </div>
+  </div>
   </div>
 </div>
 
