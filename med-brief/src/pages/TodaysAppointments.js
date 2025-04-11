@@ -33,7 +33,7 @@ const TodaysAppointments = ({ fetchTodaysAppointments, currentUserId }) => {
   }, [fetchTodaysAppointments, currentUserId]);
 
   return (
-    <div className="col-span-1 p-4 bg-white rounded-lg shadow-md">
+    <div className="col-span-1 p-4 bg-white rounded-lg shadow-md mb-4">
       <h2 className="text-2xl font-semibold mb-4">Today's Schedule</h2>
       <p className="text-gray-600 mb-6">You have {appointments.length} appointments today</p>
       <ul className="space-y-4">

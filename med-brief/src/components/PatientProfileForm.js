@@ -37,6 +37,7 @@ function PatientProfileForm() {
   }, [currentUser]);
 
   const calculateAge = (dob) => {
+    
     if (!dob) return;
     const birthDate = new Date(dob);
     const ageNow = new Date().getFullYear() - birthDate.getFullYear();

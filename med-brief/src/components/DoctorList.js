@@ -58,12 +58,7 @@ const preAppointmentQuestions = [
     type: 'mcq',
     options: ['Yes', 'No'],
   },
-  {
-    key: 'smoking',
-    label: 'Do you currently smoke or have a history of smoking?',
-    type: 'mcq',
-    options: ['Yes', 'No', 'Former smoker'],
-  },
+
   {
     key: 'alcohol',
     label: 'How often do you consume alcohol?',
@@ -88,66 +83,13 @@ const preAppointmentQuestions = [
     type: 'mcq',
     options: ['Less than 4 hours', '4-6 hours', '6-8 hours', 'More than 8 hours'],
   },
-  {
-    key: 'mentalHealth',
-    label: 'How would you rate your current mental health?',
-    type: 'mcq',
-    options: ['Poor', 'Fair', 'Good', 'Excellent'],
-  },
-  {
-    key: 'physicalHealth',
-    label: 'How would you rate your current physical health?',
-    type: 'mcq',
-    options: ['Poor', 'Fair', 'Good', 'Excellent'],
-  },
-  {
-    key: 'workStatus',
-    label: 'What is your current work status?',
-    type: 'mcq',
-    options: ['Employed', 'Unemployed', 'Retired', 'Student'],
-  },
-  {
-    key: 'insurance',
-    label: 'Do you have health insurance?',
-    type: 'mcq',
-    options: ['Yes', 'No'],
-  },
-  {
-    key: 'specialistVisit',
-    label: 'Have you visited any specialists in the past 6 months?',
-    type: 'mcq',
-    options: ['Yes', 'No'],
-  },
-  {
-    key: 'vaccinations',
-    label: 'Are you up to date with your vaccinations?',
-    type: 'mcq',
-    options: ['Yes', 'No'],
-  },
-  {
-    key: 'bloodPressure',
-    label: 'Have you had your blood pressure checked in the last year?',
-    type: 'mcq',
-    options: ['Yes', 'No'],
-  },
-  {
-    key: 'cholesterolCheck',
-    label: 'Have you had your cholesterol checked in the last year?',
-    type: 'mcq',
-    options: ['Yes', 'No'],
-  },
-  {
-    key: 'sleepQuality',
-    label: 'How would you rate the quality of your sleep?',
-    type: 'mcq',
-    options: ['Poor', 'Fair', 'Good', 'Excellent'],
-  },
-  {
-    key: 'hydration',
-    label: 'How much water do you drink daily?',
-    type: 'mcq',
-    options: ['Less than 2 glasses', '2-4 glasses', '5-7 glasses', '8+ glasses'],
-  },
+
+
+
+
+
+
+
   
 ];
 

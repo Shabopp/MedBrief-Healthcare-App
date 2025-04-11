@@ -28,7 +28,7 @@ const Homepage = () => {
   const [stats, setStats] = useState({
     providers: 0,
     administrators: 0,
-    budget: 0
+    budget: 50
   });
 
   const { scrollYProgress } = useScroll();
@@ -53,7 +53,7 @@ const Homepage = () => {
       setStats(prev => ({
         providers: Math.min(prev.providers + 1, 80),
         administrators: Math.min(prev.administrators + 100, 15432),
-        budget: Math.min(prev.budget + 0.1, 26)
+        budget: Math.min(prev.budget + 0.5, 98)
       }));
     };
 
@@ -74,9 +74,9 @@ const Homepage = () => {
   ];
 
   const statsData = [
-    { icon: Users, value: stats.providers, label: "Health Provider Shortage Areas", color: "blue" },
-    { icon: Home, value: stats.administrators, label: "State Health Administrators", color: "yellow" },
-    { icon: FileText, value: `$${stats.budget.toFixed(1)}mln`, label: "Annual MDHHS Budget", color: "green" },
+    { icon: Users, value: stats.providers, label: "Doctors", color: "blue" },
+    { icon: Home, value: stats.administrators, label: "AI Driven Prescriptions Generated", color: "yellow" },
+    { icon: FileText, value: `${stats.budget.toFixed(1)}`, label: "Accuracy", color: "green" },
     
   ];
 

@@ -220,11 +220,12 @@ function DoctorDashboard() {
     if (pdfData.prescriptions.length > 0) {
       autoTable(doc, {
         startY: prescriptionsStartY,
-        head: [['Medicine', 'Dosage', 'Purpose', 'Usage Instructions']],
+        head: [['Medicine','Content', 'Dosage', 'Duration', 'Usage Instructions']],
         body: pdfData.prescriptions.map((prescription) => [
           prescription.name || "N/A",
+          prescription.content || "N/A",
           prescription.dosage || "N/A",
-          prescription.purpose || "N/A",
+          prescription.duration || "N/A",
           prescription.usage_instructions || "N/A",
         ]),
       });
